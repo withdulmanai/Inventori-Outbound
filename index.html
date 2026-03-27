@@ -28,13 +28,12 @@
         padding: 15px; 
         min-height: 100vh;
         display: flex;
-        justify-content: center; /* Memusatkan aplikasi di desktop */
+        justify-content: center; 
     }
 
-    /* Membatasi lebar agar selalu terlihat seperti ukuran mobile/tablet kecil */
     .container { 
         width: 100%;
-        max-width: 450px; /* Ukuran maksimal mendekati tampilan di gambar */
+        max-width: 500px; 
         margin: 0 auto; 
     }
 
@@ -42,7 +41,6 @@
     header h1 { font-size: 1.8rem; font-weight: 800; letter-spacing: -0.05em; margin-bottom: 5px; }
     header p { color: var(--text-muted); font-size: 0.9rem; }
 
-    /* Grid Dashboard: Dibuat 2 kolom tetap agar tidak memanjang ke bawah */
     .dashboard-grid { 
         display: grid; 
         grid-template-columns: 1fr 1fr; 
@@ -62,7 +60,6 @@
     .stat-label { font-size: 0.7rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; }
     .stat-value { font-size: 1.5rem; font-weight: 700; }
 
-    /* Layout Utama: Dipaksa satu kolom menumpuk (Form di atas, Tabel di bawah) */
     .main-layout { 
         display: flex;
         flex-direction: column;
@@ -74,7 +71,9 @@
 
     .form-group { margin-bottom: 14px; }
     label { display: block; font-size: 0.8rem; font-weight: 500; margin-bottom: 4px; color: var(--text-muted); }
-    input, select, textarea { width: 100%; padding: 10px; background: var(--bg-dark); border: 1px solid var(--border); border-radius: 8px; color: var(--text-main); font-size: 0.9rem; outline: none; }
+    input, select, textarea { width: 100%; padding: 10px; background: var(--bg-dark); border: 1px solid var(--border); border-radius: 8px; color: var(--text-main); font-size: 0.9rem; outline: none; transition: border 0.2s; }
+    input:focus, select:focus { border-color: var(--primary); }
+    input:read-only { opacity: 0.6; cursor: not-allowed; }
     
     .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 
@@ -84,32 +83,35 @@
     .btn-primary { background: var(--primary); color: white; }
     .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text-main); margin-top: 8px; }
 
-    /* Pengaturan Tabel agar tetap rapi di layar sempit */
-    .table-container { 
-        overflow-x: auto; 
-        margin: 0 -10px; /* Memberi ruang sedikit untuk scroll horizontal jika teks sangat panjang */
-    }
-    table { width: 100%; border-collapse: collapse; min-width: 400px; }
+    /* Search and Filter Styles */
+    .search-box { position: relative; margin-bottom: 15px; }
+    .search-box input { padding-left: 35px; }
+    .search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 0.9rem; opacity: 0.5; }
+    .filter-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+
+    .table-container { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; min-width: 450px; }
     th { padding: 10px; color: var(--text-muted); font-size: 0.65rem; text-transform: uppercase; text-align: left; border-bottom: 2px solid var(--border); }
-    td { padding: 12px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; font-size: 0.85rem; }
+    td { padding: 12px 10px; border-bottom: 1px solid var(--border); font-size: 0.85rem; }
 
-    .badge { padding: 3px 8px; border-radius: 999px; font-size: 0.65rem; font-weight: 700; }
-    .badge-success { background: rgba(16, 185, 129, 0.15); color: #10b981; }
-    .badge-warning { background: rgba(245, 158, 11, 0.15); color: #f59e0b; }
-    .badge-danger { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
+    .item-container { display: flex; align-items: center; gap: 10px; }
+    .item-icon { width: 40px; height: 40px; border-radius: 12px; background: var(--bg-dark); display: flex; align-items: center; justify-content: center; font-size: 1.2rem; overflow: hidden; border: 1px solid var(--border); }
+    .item-name { display: block; font-weight: 600; font-size: 0.9rem; }
+    .item-code { display: block; font-size: 0.7rem; color: var(--text-muted); font-family: monospace; }
+    
+    .stock-val { font-weight: 700; color: var(--text-main); }
+    .stock-unit { font-size: 0.75rem; color: var(--text-muted); }
 
-    .btn-icon { padding: 6px; border-radius: 6px; background: var(--bg-dark); border: 1px solid var(--border); color: white; cursor: pointer; }
+    .badge { padding: 4px 10px; border-radius: 999px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; }
+    .badge-Baik { background: rgba(16, 185, 129, 0.15); color: #10b981; }
+    .badge-Rusak { background: rgba(245, 158, 11, 0.15); color: #f59e0b; }
+    .badge-Mati { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
 
-    #toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--primary); color: white; padding: 12px 24px; border-radius: 12px; display: none; z-index: 1000; white-space: nowrap; font-size: 0.9rem; }
+    .btn-lock { background: var(--bg-dark); border: 1px solid var(--border); color: white; padding: 6px; border-radius: 6px; cursor: pointer; transition: 0.2s; }
+
+    #toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--primary); color: white; padding: 12px 24px; border-radius: 12px; display: none; z-index: 1000; font-size: 0.9rem; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
     
     .loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.95); display: flex; align-items: center; justify-content: center; z-index: 9999; }
-
-    /* Memperbaiki posisi tombol login agar tidak menghalangi judul di layar kecil */
-    .auth-container {
-        display: flex;
-        justify-content: center;
-        margin-bottom: 15px;
-    }
 </style>
 </head>
 <body>
@@ -143,8 +145,8 @@
             <p id="userStatus">Sinkronisasi Realtime Aktif</p>
         </header>
 
-        <div style="position: absolute; top: 20px; right: 20px; z-index: 100;">
-            <button id="authBtn" class="btn" style="width: auto; background: var(--card-bg); border: 1px solid var(--border); color: white;">🔐 Login Admin</button>
+        <div style="display: flex; justify-content: flex-end; margin-bottom: 15px;">
+            <button id="authBtn" class="btn" style="width: auto; background: var(--card-bg); border: 1px solid var(--border); color: white; padding: 8px 16px;">🔐 Login Admin</button>
         </div>
 
         <section class="dashboard-grid">
@@ -169,7 +171,7 @@
         <main class="main-layout" id="mainLayout">
             <section id="adminFormSection" style="display: none;">
                 <div class="card">
-                    <div class="card-title">📝 <span id="formTitle">Tambah Inventori</span></div>
+                    <div class="card-title">📝 <span id="formTitle">Tambah / Update Stok</span></div>
                     <form id="inventoryForm">
                         <input type="hidden" id="editId">
                         <div class="form-group">
@@ -188,8 +190,8 @@
                                     <option value="Hewan">Hewan</option>
                                 </select>
                             </div>
-                            <div class="form-group">
-                                <label>Kondisi</label>
+                            <div class="form-group" id="conditionGroup">
+                                <label>Kondisi *</label>
                                 <select id="condition">
                                     <option value="Baik">Baik</option>
                                     <option value="Rusak">Rusak</option>
@@ -198,9 +200,12 @@
                             </div>
                         </div>
                         <div class="grid-2">
-                            <div class="form-group">
-                                <label>Jumlah</label>
-                                <input type="number" id="qty" value="0" min="0">
+                            <div class="form-group" id="actionGroup">
+                                <label>Aksi Stok (Jika Sama Persis)</label>
+                                <select id="stockAction">
+                                    <option value="add">➕ Tambah Stok</option>
+                                    <option value="subtract">➖ Kurangi Stok</option>
+                                </select>
                             </div>
                             <div class="form-group">
                                 <label>Satuan</label>
@@ -214,6 +219,10 @@
                             </div>
                         </div>
                         <div class="form-group">
+                            <label>Jumlah</label>
+                            <input type="number" id="qty" value="1" min="0">
+                        </div>
+                        <div class="form-group">
                             <label>Lokasi Penyimpanan *</label>
                             <input type="text" id="location" required placeholder="Gudang, Rak 1, dll">
                         </div>
@@ -221,8 +230,8 @@
                             <label>Catatan</label>
                             <textarea id="description" rows="2"></textarea>
                         </div>
-                        <div class="form-group">
-                            <label>Foto Item</label>
+                        <div class="form-group" id="photoGroup">
+                            <label>Foto Item (Opsional)</label>
                             <input type="file" id="imageInput" accept="image/*">
                             <img id="imagePreview" alt="Preview">
                         </div>
@@ -235,6 +244,27 @@
             <section id="tableSection">
                 <div class="card">
                     <div class="card-title">📊 Daftar Seluruh Barang</div>
+                    
+                    <!-- Search & Filter Controls -->
+                    <div class="search-box">
+                        <span class="search-icon">🔍</span>
+                        <input type="text" id="searchInput" placeholder="Cari nama barang atau kode...">
+                    </div>
+                    
+                    <div class="filter-row">
+                        <select id="filterCategory">
+                            <option value="all">Semua Kategori</option>
+                            <option value="Benda">Benda</option>
+                            <option value="Hewan">Hewan</option>
+                        </select>
+                        <select id="filterCondition">
+                            <option value="all">Semua Kondisi</option>
+                            <option value="Baik">Baik</option>
+                            <option value="Rusak">Rusak</option>
+                            <option value="Mati">Mati</option>
+                        </select>
+                    </div>
+
                     <div class="table-container">
                         <table>
                             <thead>
@@ -257,9 +287,9 @@
     <div id="toast"></div>
 
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
-        import { getDatabase, ref, set, onValue, push, remove, update } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-database.js";
-        import { getAuth, signInAnonymously, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-auth.js";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+        import { getDatabase, ref, set, onValue, push, remove, update } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-database.js";
+        import { getAuth, signInAnonymously, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyBU_8nsWAQxTU9XDrl0rrlvJcA8x7068Cs",
@@ -273,6 +303,7 @@
         const auth = getAuth(app);
 
         let inventoryData = [];
+        let filteredData = [];
         let isEditing = false;
         let currentImageBase64 = "";
 
@@ -290,22 +321,23 @@
             adminSection: document.getElementById('adminFormSection'),
             authBtn: document.getElementById('authBtn'),
             loginModal: document.getElementById('loginModal'),
-            mainLayout: document.getElementById('mainLayout')
+            mainLayout: document.getElementById('mainLayout'),
+            stockAction: document.getElementById('stockAction'),
+            actionGroup: document.getElementById('actionGroup'),
+            
+            // Search & Filter elements
+            searchInput: document.getElementById('searchInput'),
+            filterCategory: document.getElementById('filterCategory'),
+            filterCondition: document.getElementById('filterCondition')
         };
 
-        // --- AUTH LOGIC ---
+        // --- AUTH ---
         onAuthStateChanged(auth, (user) => {
             if (user) {
                 const isAdmin = !user.isAnonymous;
-                document.getElementById('userStatus').textContent = isAdmin ? "Mode: Admin (Full Access)" : "Mode: Pantau (Read-Only)";
-                
-                // Menampilkan/Sembunyikan form admin
+                document.getElementById('userStatus').textContent = isAdmin ? `Admin: ${user.email}` : "Mode Pantau (Read-Only)";
                 elements.adminSection.style.display = isAdmin ? "block" : "none";
                 elements.authBtn.textContent = isAdmin ? "🚀 Logout Admin" : "🔐 Login Admin";
-                
-                // Atur grid layout
-                elements.mainLayout.style.gridTemplateColumns = isAdmin ? "380px 1fr" : "1fr";
-                
                 setupRealtimeListener();
                 elements.loader.style.display = 'none';
             } else {
@@ -324,8 +356,6 @@
         document.getElementById('doLogin').onclick = async () => {
             const email = document.getElementById('loginEmail').value;
             const pass = document.getElementById('loginPassword').value;
-            if(!email || !pass) return alert("Isi email & password!");
-            
             try {
                 await signInWithEmailAndPassword(auth, email, pass);
                 elements.loginModal.style.display = "none";
@@ -335,72 +365,133 @@
 
         document.getElementById('closeLogin').onclick = () => elements.loginModal.style.display = "none";
 
-        // --- DATABASE LOGIC ---
+        // --- DATABASE & FILTERING ---
         function setupRealtimeListener() {
             onValue(ref(db, 'inventory'), (snapshot) => {
                 const data = snapshot.val();
                 inventoryData = data ? Object.keys(data).map(key => ({ id: key, ...data[key] })) : [];
                 inventoryData.sort((a, b) => b.timestamp - a.timestamp);
-                renderTable();
+                applyFilters();
                 updateDashboard();
             });
         }
 
-        function renderTable() {
-    elements.body.innerHTML = "";
-    const isAdmin = auth.currentUser && !auth.currentUser.isAnonymous;
-    
-    inventoryData.forEach(item => {
-        const tr = document.createElement('tr');
-        
-        tr.innerHTML = `
-            <td>
-                <div class="item-container">
-                    <div class="item-icon">
-                        ${item.image ? `<img src="${item.image}" style="width:100%; height:100%; border-radius:12px; object-fit:cover;">` : '📦'}
-                    </div>
-                    <div>
-                        <span class="item-name">${item.name}</span>
-                        <span class="item-code">${item.code}</span>
-                    </div>
-                </div>
-            </td>
-            <td>
-                <span class="stock-val">${item.qty}</span>
-                <span class="stock-unit">${item.unit}</span>
-            </td>
-            <td>
-                <span class="loc-pin">📍</span>
-                <span class="loc-text">${item.location}</span>
-            </td>
-            <td>
-                <span class="badge-baik">${item.condition}</span>
-            </td>
-            <td style="text-align: center;">
-                ${isAdmin ? `
-                    <button class="btn-lock btn-edit" data-id="${item.id}" title="Edit">🔓</button>
-                    <button class="btn-lock btn-delete" data-id="${item.id}" title="Hapus" style="filter: hue-rotate(300deg);">🗑️</button>
-                ` : '<button class="btn-lock">🔒</button>'}
-            </td>
-        `;
-        elements.body.appendChild(tr);
-    });
+        function applyFilters() {
+            const searchTerm = elements.searchInput.value.toLowerCase();
+            const catFilter = elements.filterCategory.value;
+            const condFilter = elements.filterCondition.value;
 
-    // Re-bind events
-    document.querySelectorAll('.btn-edit').forEach(btn => btn.onclick = () => editItem(btn.dataset.id));
-    document.querySelectorAll('.btn-delete').forEach(btn => btn.onclick = () => deleteItem(btn.dataset.id));
-}
+            filteredData = inventoryData.filter(item => {
+                const matchesSearch = item.name.toLowerCase().includes(searchTerm) || 
+                                     (item.code && item.code.toLowerCase().includes(searchTerm));
+                const matchesCat = catFilter === 'all' || item.category === catFilter;
+                const matchesCond = condFilter === 'all' || item.condition === condFilter;
+
+                return matchesSearch && matchesCat && matchesCond;
+            });
+
+            renderTable();
+        }
+
+        // Event listeners for searching/filtering
+        elements.searchInput.oninput = applyFilters;
+        elements.filterCategory.onchange = applyFilters;
+        elements.filterCondition.onchange = applyFilters;
+
+        function renderTable() {
+            elements.body.innerHTML = "";
+            const isAdmin = auth.currentUser && !auth.currentUser.isAnonymous;
+            
+            if(filteredData.length === 0) {
+                elements.body.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 40px; color: var(--text-muted);">Tidak ada data yang cocok.</td></tr>`;
+                return;
+            }
+
+            filteredData.forEach(item => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>
+                        <div class="item-container">
+                            <div class="item-icon">
+                                ${item.image ? `<img src="${item.image}" style="width:100%; height:100%; object-fit:cover;">` : (item.category === 'Hewan' ? '🐎' : '📦')}
+                            </div>
+                            <div>
+                                <span class="item-name">${item.name}</span>
+                                <span class="item-code">${item.code || ''}</span>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="stock-val">${item.qty}</span>
+                        <span class="stock-unit">${item.unit}</span>
+                    </td>
+                    <td><span class="loc-text">📍 ${item.location}</span></td>
+                    <td><span class="badge badge-${item.condition}">${item.condition}</span></td>
+                    <td style="text-align: center;">
+                        ${isAdmin ? `
+                            <button class="btn-lock btn-edit" data-id="${item.id}">✏️</button>
+                            <button class="btn-lock btn-delete" data-id="${item.id}">🗑️</button>
+                        ` : '🔒'}
+                    </td>
+                `;
+                elements.body.appendChild(tr);
+            });
+
+            document.querySelectorAll('.btn-edit').forEach(btn => btn.onclick = () => editItem(btn.dataset.id));
+            document.querySelectorAll('.btn-delete').forEach(btn => btn.onclick = () => deleteItem(btn.dataset.id));
+        }
 
         elements.form.onsubmit = async (e) => {
             e.preventDefault();
+            
+            const name = document.getElementById('itemName').value.trim();
+            const category = document.getElementById('category').value;
+            const condition = document.getElementById('condition').value;
+            const location = document.getElementById('location').value.trim();
+            const inputQty = parseInt(document.getElementById('qty').value);
+            const action = elements.stockAction.value;
+            
+            if (!isEditing) {
+                const existingItem = inventoryData.find(item => 
+                    item.name.toLowerCase() === name.toLowerCase() && 
+                    item.category === category &&
+                    item.condition === condition &&
+                    item.location.toLowerCase() === location.toLowerCase()
+                );
+
+                if (existingItem) {
+                    let newTotal = existingItem.qty;
+                    if (action === 'add') {
+                        newTotal += inputQty;
+                    } else {
+                        newTotal -= inputQty;
+                    }
+
+                    if (newTotal < 0) {
+                        alert("⚠️ Error: Stok tidak boleh kurang dari nol!");
+                        return;
+                    }
+
+                    try {
+                        await update(ref(db, `inventory/${existingItem.id}`), {
+                            qty: newTotal,
+                            timestamp: Date.now()
+                        });
+                        showToast(`♻️ Stok diperbarui! Total: ${newTotal}`);
+                        resetForm();
+                        return;
+                    } catch (err) { alert(err.message); }
+                }
+            }
+
             const data = {
                 code: elements.itemCode.value,
-                name: document.getElementById('itemName').value,
-                category: document.getElementById('category').value,
-                condition: document.getElementById('condition').value,
-                qty: parseInt(document.getElementById('qty').value),
+                name: name,
+                category: category,
+                condition: condition,
+                qty: inputQty,
                 unit: document.getElementById('unit').value,
-                location: document.getElementById('location').value,
+                location: location,
                 description: document.getElementById('description').value,
                 image: currentImageBase64,
                 timestamp: Date.now()
@@ -409,21 +500,22 @@
             try {
                 if (isEditing) {
                     await update(ref(db, `inventory/${document.getElementById('editId').value}`), data);
-                    showToast("Data Berhasil Diperbarui!");
+                    showToast("✅ Berhasil diperbarui!");
                 } else {
                     await push(ref(db, 'inventory'), data);
-                    showToast("Data Berhasil Ditambah!");
+                    showToast("✨ Berhasil ditambahkan!");
                 }
                 resetForm();
-            } catch (err) { alert("Error: " + err.message); }
+            } catch (err) { alert(err.message); }
         };
 
         function editItem(id) {
             const item = inventoryData.find(i => i.id === id);
             isEditing = true;
-            elements.formTitle.textContent = "Ubah Data";
-            elements.submitBtn.textContent = "🔄 Update Data";
+            elements.formTitle.textContent = "Ubah Data Manual";
+            elements.submitBtn.textContent = "🔄 Update";
             elements.cancelBtn.style.display = "block";
+            elements.actionGroup.style.display = "none";
             
             document.getElementById('editId').value = id;
             document.getElementById('itemName').value = item.name;
@@ -434,23 +526,18 @@
             document.getElementById('unit').value = item.unit;
             document.getElementById('location').value = item.location;
             document.getElementById('description').value = item.description || "";
-            
             if (item.image) { 
                 currentImageBase64 = item.image; 
                 elements.imgPrev.src = item.image; 
                 elements.imgPrev.style.display = 'block'; 
-            } else {
-                elements.imgPrev.style.display = 'none';
+            } else { 
+                elements.imgPrev.style.display = 'none'; 
             }
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
         function deleteItem(id) { 
-            if(confirm("Apakah Anda yakin ingin menghapus item ini?")) {
-                remove(ref(db, `inventory/${id}`))
-                .then(() => showToast("Item dihapus"))
-                .catch(err => alert(err.message)); 
-            }
+            if(confirm("Hapus item ini secara permanen?")) remove(ref(db, `inventory/${id}`)).then(() => showToast("Item dihapus")); 
         }
 
         function updateDashboard() {
@@ -465,37 +552,22 @@
             elements.form.reset();
             elements.imgPrev.style.display = 'none';
             elements.cancelBtn.style.display = "none";
-            elements.formTitle.textContent = "Tambah Inventori";
+            elements.actionGroup.style.display = "block";
+            elements.formTitle.textContent = "Tambah / Update Stok";
             elements.submitBtn.textContent = "💾 Simpan ke Cloud";
             currentImageBase64 = "";
             generateCode();
         }
 
         elements.cancelBtn.onclick = resetForm;
-
-        function generateCode() { 
-            elements.itemCode.value = "INV-" + Math.random().toString(36).substr(2, 6).toUpperCase(); 
-        }
-
-        function showToast(msg) { 
-            elements.toast.textContent = msg; 
-            elements.toast.style.display = 'block'; 
-            setTimeout(() => elements.toast.style.display = 'none', 3000); 
-        }
-        
+        function generateCode() { elements.itemCode.value = "INV-" + Math.random().toString(36).substr(2, 6).toUpperCase(); }
+        function showToast(msg) { elements.toast.textContent = msg; elements.toast.style.display = 'block'; setTimeout(() => elements.toast.style.display = 'none', 3000); }
         elements.imgInput.onchange = (e) => {
             const file = e.target.files[0];
-            if(!file) return;
             const reader = new FileReader();
-            reader.onload = (ev) => { 
-                currentImageBase64 = ev.target.result; 
-                elements.imgPrev.src = ev.target.result; 
-                elements.imgPrev.style.display = 'block'; 
-            };
-            reader.readAsDataURL(file);
+            reader.onload = (ev) => { currentImageBase64 = ev.target.result; elements.imgPrev.src = ev.target.result; elements.imgPrev.style.display = 'block'; };
+            if(file) reader.readAsDataURL(file);
         };
-      
-
         generateCode();
     </script>
 </body>
