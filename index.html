@@ -322,240 +322,242 @@
 
     <div id="toast"></div>
 
-    <!-- Firebase SDK -->
     <script type="module">
-  // Import the functions you need from the SDKs you need
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
-  // TODO: Add SDKs for Firebase products that you want to use
-  // https://firebase.google.com/docs/web/setup#available-libraries
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
+    import { 
+        getFirestore, collection, doc, setDoc, deleteDoc, 
+        onSnapshot, serverTimestamp, query, orderBy 
+    } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
+    import { 
+        getAuth, signInAnonymously, onAuthStateChanged 
+    } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-auth.js";
 
-  // Your web app's Firebase configuration
-  const firebaseConfig = {
-    apiKey: "AIzaSyBU_8nsWAQxTU9XDrl0rrlvJcA8x7068Cs",
-    authDomain: "inventori-outbound.firebaseapp.com",
-    projectId: "inventori-outbound",
-    storageBucket: "inventori-outbound.firebasestorage.app",
-    messagingSenderId: "603191770704",
-    appId: "1:603191770704:web:302df531503126e2215b55"
-  };
+    // Konfigurasi Firebase Anda
+    const firebaseConfig = {
+        apiKey: "AIzaSyBU_8nsWAQxTU9XDrl0rrlvJcA8x7068Cs",
+        authDomain: "inventori-outbound.firebaseapp.com",
+        projectId: "inventori-outbound",
+        storageBucket: "inventori-outbound.firebasestorage.app",
+        messagingSenderId: "603191770704",
+        appId: "1:603191770704:web:302df531503126e2215b55"
+    };
 
-  // Initialize Firebase
-  const app = initializeApp(firebaseConfig);
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
 
-        let inventoryData = [];
-        let isEditing = false;
-        let currentImageBase64 = "";
-        let currentUser = null;
+    let inventoryData = [];
+    let isEditing = false;
+    let currentImageBase64 = "";
+    let currentUser = null;
 
-        const elements = {
-            form: document.getElementById('inventoryForm'),
-            body: document.getElementById('inventoryBody'),
-            imgInput: document.getElementById('imageInput'),
-            imgPrev: document.getElementById('imagePreview'),
-            itemCode: document.getElementById('itemCode'),
-            loader: document.getElementById('loader'),
-            toast: document.getElementById('toast'),
-            formTitle: document.getElementById('formTitle'),
-            cancelBtn: document.getElementById('cancelBtn'),
-            submitBtn: document.getElementById('submitBtn'),
-            statTotal: document.getElementById('stat-total'),
-            statHewan: document.getElementById('stat-hewan'),
-            statBenda: document.getElementById('stat-benda'),
-            statAlert: document.getElementById('stat-alert')
-        };
+    // Mapping DOM Elements
+    const elements = {
+        form: document.getElementById('inventoryForm'),
+        body: document.getElementById('inventoryBody'),
+        imgInput: document.getElementById('imageInput'),
+        imgPrev: document.getElementById('imagePreview'),
+        itemCode: document.getElementById('itemCode'),
+        loader: document.getElementById('loader'),
+        toast: document.getElementById('toast'),
+        formTitle: document.getElementById('formTitle'),
+        cancelBtn: document.getElementById('cancelBtn'),
+        submitBtn: document.getElementById('submitBtn'),
+        statTotal: document.getElementById('stat-total'),
+        statHewan: document.getElementById('stat-hewan'),
+        statBenda: document.getElementById('stat-benda'),
+        statAlert: document.getElementById('stat-alert')
+    };
 
-        // --- AUTH ---
-        const initAuth = async () => {
-            try {
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    await signInWithCustomToken(auth, __initial_auth_token);
-                } else {
-                    await signInAnonymously(auth);
-                }
-            } catch (err) {
-                console.error("Auth Error:", err);
-                showToast("Gagal terhubung ke Cloud.");
-            }
-        };
-
-        onAuthStateChanged(auth, (user) => {
-            currentUser = user;
-            if (user) {
-                document.getElementById('userStatus').textContent = `Sinkronisasi Aktif: ${user.uid.substring(0,8)}...`;
-                setupRealtimeListener();
-                elements.loader.style.display = 'none';
-            }
-        });
-
-        initAuth();
-
-        // --- FIRESTORE REALTIME ---
-        function setupRealtimeListener() {
-            if (!currentUser) return;
-            
-            const colRef = collection(db, 'artifacts', appId, 'public', 'data', 'items');
-            
-            onSnapshot(colRef, (snapshot) => {
-                inventoryData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                renderTable();
-                updateDashboard();
-            }, (error) => {
-                console.error("Snapshot error:", error);
-                showToast("Koneksi terputus. Mencoba menghubungkan kembali...");
-            });
+    // --- AUTHENTICATION ---
+    onAuthStateChanged(auth, (user) => {
+        currentUser = user;
+        if (user) {
+            document.getElementById('userStatus').textContent = `Sinkronisasi Aktif: ${user.uid.substring(0,8)}...`;
+            setupRealtimeListener();
+            elements.loader.style.display = 'none';
+        } else {
+            signInAnonymously(auth);
         }
+    });
 
-        // --- UI LOGIC ---
-        function renderTable() {
-            elements.body.innerHTML = "";
-            const sortedData = [...inventoryData].sort((a, b) => (b.updatedAt?.seconds || 0) - (a.updatedAt?.seconds || 0));
+    // --- FIRESTORE REALTIME LISTENER ---
+    function setupRealtimeListener() {
+        // Mengambil referensi koleksi 'items'
+        const colRef = collection(db, 'items');
+        // Query untuk mengurutkan berdasarkan waktu update terbaru
+        const q = query(colRef, orderBy("updatedAt", "desc"));
+        
+        // Fungsi onSnapshot inilah yang membuat "Realtime"
+        onSnapshot(q, (snapshot) => {
+            inventoryData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            renderTable();
+            updateDashboard();
+        }, (error) => {
+            console.error("Snapshot error:", error);
+            showToast("Gagal memuat data realtime.");
+        });
+    }
 
-            sortedData.forEach(item => {
-                const conditionClass = item.condition === 'Baik' ? 'badge-success' : 
-                                      (item.condition === 'Rusak' ? 'badge-warning' : 'badge-danger');
-                
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td>
-                        <div style="display:flex; align-items:center; gap:10px;">
-                            ${item.image ? `<img src="${item.image}" style="width:40px; height:40px; border-radius:8px; object-fit:cover;">` : '📦'}
-                            <div>
-                                <div style="font-weight:600;">${item.name}</div>
-                                <div style="font-size:0.7rem; color:var(--text-muted);">${item.code}</div>
-                            </div>
+    // --- UI RENDERING ---
+    function renderTable() {
+        elements.body.innerHTML = "";
+        inventoryData.forEach(item => {
+            const conditionClass = item.condition === 'Baik' ? 'badge-success' : 
+                                  (item.condition === 'Rusak' ? 'badge-warning' : 'badge-danger');
+            
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        ${item.image ? `<img src="${item.image}" style="width:40px; height:40px; border-radius:8px; object-fit:cover;">` : '📦'}
+                        <div>
+                            <div style="font-weight:600;">${item.name}</div>
+                            <div style="font-size:0.7rem; color:var(--text-muted);">${item.code}</div>
                         </div>
-                    </td>
-                    <td><b>${item.qty}</b> <span style="font-size:0.8rem; opacity:0.7;">${item.unit}</span></td>
-                    <td>📍 ${item.location}</td>
-                    <td><span class="badge ${conditionClass}">${item.condition}</span></td>
-                    <td>
-                        <button class="btn-icon" onclick="editItem('${item.id}')">✏️</button>
-                        <button class="btn-icon" onclick="deleteItem('${item.id}')">🗑️</button>
-                    </td>
-                `;
-                elements.body.appendChild(tr);
-            });
-        }
-
-        function updateDashboard() {
-            elements.statTotal.textContent = inventoryData.length;
-            elements.statHewan.textContent = inventoryData.filter(i => i.category === 'Hewan').length;
-            elements.statBenda.textContent = inventoryData.filter(i => i.category === 'Benda').length;
-            elements.statAlert.textContent = inventoryData.filter(i => i.condition !== 'Baik').length;
-        }
-
-        // --- ACTIONS ---
-        elements.form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            if (!currentUser) return showToast("Menunggu koneksi...");
-
-            elements.submitBtn.disabled = true;
-            elements.submitBtn.textContent = "⏳ Memproses...";
-
-            const id = isEditing ? document.getElementById('editId').value : Date.now().toString();
-            const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'items', id);
-
-            const payload = {
-                code: elements.itemCode.value,
-                name: elements.form.itemName.value,
-                category: elements.form.category.value,
-                condition: elements.form.condition.value,
-                qty: parseInt(elements.form.qty.value) || 0,
-                unit: elements.form.unit.value,
-                location: elements.form.location.value,
-                description: elements.form.description.value,
-                image: currentImageBase64,
-                updatedAt: serverTimestamp(),
-                userId: currentUser.uid
-            };
-
-            try {
-                await setDoc(docRef, payload);
-                showToast(isEditing ? "Berhasil diperbarui!" : "Berhasil disimpan ke Cloud!");
-                resetForm();
-            } catch (err) {
-                console.error("Save Error:", err);
-                showToast("Gagal menyimpan data.");
-            } finally {
-                elements.submitBtn.disabled = false;
-            }
+                    </div>
+                </td>
+                <td><b>${item.qty}</b> <span style="font-size:0.8rem; opacity:0.7;">${item.unit}</span></td>
+                <td>📍 ${item.location}</td>
+                <td><span class="badge ${conditionClass}">${item.condition}</span></td>
+                <td>
+                    <button class="btn-icon edit-btn" data-id="${item.id}">✏️</button>
+                    <button class="btn-icon delete-btn" data-id="${item.id}">🗑️</button>
+                </td>
+            `;
+            elements.body.appendChild(tr);
         });
 
-        window.deleteItem = async (id) => {
-            if (!confirm("Hapus data dari Cloud?")) return;
-            try {
-                await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'items', id));
-                showToast("Terhapus!");
-            } catch (err) {
-                showToast("Gagal menghapus.");
-            }
+        // Attach event listeners ke tombol yang baru dibuat
+        document.querySelectorAll('.edit-btn').forEach(btn => {
+            btn.onclick = () => editItem(btn.dataset.id);
+        });
+        document.querySelectorAll('.delete-btn').forEach(btn => {
+            btn.onclick = () => deleteItem(btn.dataset.id);
+        });
+    }
+
+    function updateDashboard() {
+        elements.statTotal.textContent = inventoryData.length;
+        elements.statHewan.textContent = inventoryData.filter(i => i.category === 'Hewan').length;
+        elements.statBenda.textContent = inventoryData.filter(i => i.category === 'Benda').length;
+        elements.statAlert.textContent = inventoryData.filter(i => i.condition !== 'Baik').length;
+    }
+
+    // --- FORM ACTIONS ---
+    elements.form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (!currentUser) return showToast("Menunggu koneksi...");
+
+        elements.submitBtn.disabled = true;
+        elements.submitBtn.textContent = "⏳ Memproses...";
+
+        const id = isEditing ? document.getElementById('editId').value : Date.now().toString();
+        const docRef = doc(db, 'items', id);
+
+        const payload = {
+            code: elements.itemCode.value,
+            name: elements.form.itemName.value,
+            category: elements.form.category.value,
+            condition: elements.form.condition.value,
+            qty: parseInt(elements.form.qty.value) || 0,
+            unit: elements.form.unit.value,
+            location: elements.form.location.value,
+            description: elements.form.description.value,
+            image: currentImageBase64,
+            updatedAt: serverTimestamp(),
+            userId: currentUser.uid
         };
 
-        window.editItem = (id) => {
-            const item = inventoryData.find(i => i.id === id);
-            if (!item) return;
-
-            isEditing = true;
-            elements.formTitle.textContent = "Ubah Data Cloud";
-            elements.cancelBtn.style.display = "block";
-            elements.submitBtn.textContent = "🔄 Update Cloud";
-            
-            document.getElementById('editId').value = item.id;
-            elements.itemCode.value = item.code;
-            elements.form.itemName.value = item.name;
-            elements.form.category.value = item.category;
-            elements.form.condition.value = item.condition;
-            elements.form.qty.value = item.qty;
-            elements.form.unit.value = item.unit;
-            elements.form.location.value = item.location;
-            elements.form.description.value = item.description || "";
-            
-            if (item.image) {
-                currentImageBase64 = item.image;
-                elements.imgPrev.src = item.image;
-                elements.imgPrev.style.display = "block";
-            }
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        };
-
-        // --- UTILS ---
-        elements.imgInput.onchange = (e) => {
-            const file = e.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = (ev) => {
-                    currentImageBase64 = ev.target.result;
-                    elements.imgPrev.src = currentImageBase64;
-                    elements.imgPrev.style.display = 'block';
-                };
-                reader.readAsDataURL(file);
-            }
-        };
-
-        function resetForm() {
-            isEditing = false;
-            elements.form.reset();
-            elements.formTitle.textContent = "Tambah Inventori";
-            elements.cancelBtn.style.display = "none";
-            elements.submitBtn.textContent = "💾 Simpan ke Cloud";
-            elements.imgPrev.style.display = "none";
-            currentImageBase64 = "";
-            generateCode();
+        try {
+            await setDoc(docRef, payload);
+            showToast(isEditing ? "Berhasil diperbarui!" : "Berhasil disimpan!");
+            resetForm();
+        } catch (err) {
+            console.error("Save Error:", err);
+            showToast("Gagal menyimpan data.");
+        } finally {
+            elements.submitBtn.disabled = false;
         }
+    });
 
-        elements.cancelBtn.onclick = resetForm;
-
-        function generateCode() {
-            elements.itemCode.value = "INV-" + Math.random().toString(36).substr(2, 6).toUpperCase();
+    // --- GLOBAL ACTIONS (Edit & Delete) ---
+    window.deleteItem = async (id) => {
+        if (!confirm("Hapus data ini?")) return;
+        try {
+            await deleteDoc(doc(db, 'items', id));
+            showToast("Data dihapus!");
+        } catch (err) {
+            showToast("Gagal menghapus.");
         }
+    };
 
-        function showToast(msg) {
-            elements.toast.textContent = msg;
-            elements.toast.style.display = 'block';
-            setTimeout(() => elements.toast.style.display = 'none', 3000);
+    window.editItem = (id) => {
+        const item = inventoryData.find(i => i.id === id);
+        if (!item) return;
+
+        isEditing = true;
+        elements.formTitle.textContent = "Ubah Data";
+        elements.cancelBtn.style.display = "block";
+        elements.submitBtn.textContent = "🔄 Update Data";
+        
+        document.getElementById('editId').value = item.id;
+        elements.itemCode.value = item.code;
+        elements.form.itemName.value = item.name;
+        elements.form.category.value = item.category;
+        elements.form.condition.value = item.condition;
+        elements.form.qty.value = item.qty;
+        elements.form.unit.value = item.unit;
+        elements.form.location.value = item.location;
+        elements.form.description.value = item.description || "";
+        
+        if (item.image) {
+            currentImageBase64 = item.image;
+            elements.imgPrev.src = item.image;
+            elements.imgPrev.style.display = "block";
         }
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
 
+    // --- UTILS ---
+    elements.imgInput.onchange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                currentImageBase64 = ev.target.result;
+                elements.imgPrev.src = currentImageBase64;
+                elements.imgPrev.style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    function resetForm() {
+        isEditing = false;
+        elements.form.reset();
+        elements.formTitle.textContent = "Tambah Inventori";
+        elements.cancelBtn.style.display = "none";
+        elements.submitBtn.textContent = "💾 Simpan ke Cloud";
+        elements.imgPrev.style.display = "none";
+        currentImageBase64 = "";
         generateCode();
-    </script>
+    }
+
+    elements.cancelBtn.onclick = resetForm;
+
+    function generateCode() {
+        elements.itemCode.value = "INV-" + Math.random().toString(36).substr(2, 6).toUpperCase();
+    }
+
+    function showToast(msg) {
+        elements.toast.textContent = msg;
+        elements.toast.style.display = 'block';
+        setTimeout(() => elements.toast.style.display = 'none', 3000);
+    }
+
+    generateCode();
+</script>
 </body>
 </html>
