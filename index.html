@@ -324,35 +324,29 @@
 
     <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
-    import { 
-        getFirestore, collection, doc, setDoc, deleteDoc, 
-        onSnapshot, serverTimestamp, query, orderBy 
-    } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
-    import { 
-        getAuth, signInAnonymously, onAuthStateChanged 
-    } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-auth.js";
+    // Import Realtime Database & Auth
+    import { getDatabase, ref, set, onValue, push, remove, update } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-database.js";
+    import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-auth.js";
 
-    // Konfigurasi Firebase Anda
     const firebaseConfig = {
         apiKey: "AIzaSyBU_8nsWAQxTU9XDrl0rrlvJcA8x7068Cs",
         authDomain: "inventori-outbound.firebaseapp.com",
+        databaseURL: "https://inventori-outbound-default-rtdb.firebaseio.com", // Pastikan URL ini sesuai dengan di Console
         projectId: "inventori-outbound",
         storageBucket: "inventori-outbound.firebasestorage.app",
         messagingSenderId: "603191770704",
         appId: "1:603191770704:web:302df531503126e2215b55"
     };
 
-    // Initialize Firebase
     const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+    const db = getDatabase(app);
     const auth = getAuth(app);
 
     let inventoryData = [];
     let isEditing = false;
     let currentImageBase64 = "";
-    let currentUser = null;
 
-    // Mapping DOM Elements
+    // DOM Elements (Sama seperti sebelumnya)
     const elements = {
         form: document.getElementById('inventoryForm'),
         body: document.getElementById('inventoryBody'),
@@ -371,42 +365,115 @@
     };
 
     // --- AUTHENTICATION ---
-    onAuthStateChanged(auth, (user) => {
-        currentUser = user;
-        if (user) {
-            document.getElementById('userStatus').textContent = `Sinkronisasi Aktif: ${user.uid.substring(0,8)}...`;
-            setupRealtimeListener();
-            elements.loader.style.display = 'none';
-        } else {
-            signInAnonymously(auth);
-        }
-    });
+onAuthStateChanged(auth, (user) => {
+    if (user) {
+        // Pengguna sudah login (Anonymous atau Permanent)
+        // Rules ".read": "auth != null" sekarang terpenuhi
+        document.getElementById('userStatus').textContent = `Terhubung sebagai: ${user.isAnonymous ? 'Tamu' : 'Admin'}`;
+        setupRealtimeListener(); // Jalankan sinkronisasi data
+        elements.loader.style.display = 'none';
+    } else {
+        // Jika belum login, paksa login secara anonim
+        signInAnonymously(auth).catch((error) => {
+            console.error("Auth Error:", error);
+            showToast("Gagal masuk ke sistem.");
+        });
+    }
+});
 
-    // --- FIRESTORE REALTIME LISTENER ---
     function setupRealtimeListener() {
-        // Mengambil referensi koleksi 'items'
-        const colRef = collection(db, 'items');
-        // Query untuk mengurutkan berdasarkan waktu update terbaru
-        const q = query(colRef, orderBy("updatedAt", "desc"));
+        const inventoryRef = ref(db, 'inventory');
         
-        // Fungsi onSnapshot inilah yang membuat "Realtime"
-        onSnapshot(q, (snapshot) => {
-            inventoryData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        // Fungsi onValue adalah jantung dari Realtime Database
+        onValue(inventoryRef, (snapshot) => {
+            const data = snapshot.val();
+            inventoryData = [];
+            if (data) {
+                // Mengubah objek JSON Firebase menjadi Array
+                Object.keys(data).forEach(key => {
+                    inventoryData.push({ id: key, ...data[key] });
+                });
+            }
+            // Sort terbaru di atas
+            inventoryData.sort((a, b) => b.timestamp - a.timestamp);
             renderTable();
             updateDashboard();
-        }, (error) => {
-            console.error("Snapshot error:", error);
-            showToast("Gagal memuat data realtime.");
         });
     }
 
-    // --- UI RENDERING ---
+    // --- ACTIONS ---
+    elements.form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        elements.submitBtn.disabled = true;
+
+        const formData = {
+            code: elements.itemCode.value,
+            name: elements.form.itemName.value,
+            category: elements.form.category.value,
+            condition: elements.form.condition.value,
+            qty: parseInt(elements.form.qty.value) || 0,
+            unit: elements.form.unit.value,
+            location: elements.form.location.value,
+            description: elements.form.description.value,
+            image: currentImageBase64,
+            timestamp: Date.now()
+        };
+
+        try {
+            if (isEditing) {
+                const id = document.getElementById('editId').value;
+                await update(ref(db, `inventory/${id}`), formData);
+                showToast("Data diperbarui!");
+            } else {
+                const newPostRef = push(ref(db, 'inventory'));
+                await set(newPostRef, formData);
+                showToast("Berhasil disimpan!");
+            }
+            resetForm();
+        } catch (err) {
+            showToast("Gagal menyimpan: " + err.message);
+        } finally {
+            elements.submitBtn.disabled = false;
+        }
+    });
+
+    window.deleteItem = async (id) => {
+        if (confirm("Hapus item ini?")) {
+            await remove(ref(db, `inventory/${id}`));
+            showToast("Item dihapus.");
+        }
+    };
+
+    // Fungsi renderTable, updateDashboard, editItem, dan resetForm tetap sama logic-nya
+    // Hanya pastikan pemanggilan global window.editItem tetap ada
+    window.editItem = (id) => {
+        const item = inventoryData.find(i => i.id === id);
+        if (!item) return;
+        isEditing = true;
+        elements.formTitle.textContent = "Ubah Data Inventori";
+        elements.cancelBtn.style.display = "block";
+        elements.submitBtn.textContent = "🔄 Update Data";
+        document.getElementById('editId').value = id;
+        elements.itemCode.value = item.code;
+        elements.form.itemName.value = item.name;
+        elements.form.category.value = item.category;
+        elements.form.condition.value = item.condition;
+        elements.form.qty.value = item.qty;
+        elements.form.unit.value = item.unit;
+        elements.form.location.value = item.location;
+        elements.form.description.value = item.description || "";
+        if (item.image) {
+            currentImageBase64 = item.image;
+            elements.imgPrev.src = item.image;
+            elements.imgPrev.style.display = "block";
+        }
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
     function renderTable() {
         elements.body.innerHTML = "";
         inventoryData.forEach(item => {
-            const conditionClass = item.condition === 'Baik' ? 'badge-success' : 
-                                  (item.condition === 'Rusak' ? 'badge-warning' : 'badge-danger');
-            
+            const conditionClass = item.condition === 'Baik' ? 'badge-success' : (item.condition === 'Rusak' ? 'badge-warning' : 'badge-danger');
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td>
@@ -422,19 +489,11 @@
                 <td>📍 ${item.location}</td>
                 <td><span class="badge ${conditionClass}">${item.condition}</span></td>
                 <td>
-                    <button class="btn-icon edit-btn" data-id="${item.id}">✏️</button>
-                    <button class="btn-icon delete-btn" data-id="${item.id}">🗑️</button>
+                    <button class="btn-icon" onclick="editItem('${item.id}')">✏️</button>
+                    <button class="btn-icon" onclick="deleteItem('${item.id}')">🗑️</button>
                 </td>
             `;
             elements.body.appendChild(tr);
-        });
-
-        // Attach event listeners ke tombol yang baru dibuat
-        document.querySelectorAll('.edit-btn').forEach(btn => {
-            btn.onclick = () => editItem(btn.dataset.id);
-        });
-        document.querySelectorAll('.delete-btn').forEach(btn => {
-            btn.onclick = () => deleteItem(btn.dataset.id);
         });
     }
 
@@ -444,95 +503,6 @@
         elements.statBenda.textContent = inventoryData.filter(i => i.category === 'Benda').length;
         elements.statAlert.textContent = inventoryData.filter(i => i.condition !== 'Baik').length;
     }
-
-    // --- FORM ACTIONS ---
-    elements.form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        if (!currentUser) return showToast("Menunggu koneksi...");
-
-        elements.submitBtn.disabled = true;
-        elements.submitBtn.textContent = "⏳ Memproses...";
-
-        const id = isEditing ? document.getElementById('editId').value : Date.now().toString();
-        const docRef = doc(db, 'items', id);
-
-        const payload = {
-            code: elements.itemCode.value,
-            name: elements.form.itemName.value,
-            category: elements.form.category.value,
-            condition: elements.form.condition.value,
-            qty: parseInt(elements.form.qty.value) || 0,
-            unit: elements.form.unit.value,
-            location: elements.form.location.value,
-            description: elements.form.description.value,
-            image: currentImageBase64,
-            updatedAt: serverTimestamp(),
-            userId: currentUser.uid
-        };
-
-        try {
-            await setDoc(docRef, payload);
-            showToast(isEditing ? "Berhasil diperbarui!" : "Berhasil disimpan!");
-            resetForm();
-        } catch (err) {
-            console.error("Save Error:", err);
-            showToast("Gagal menyimpan data.");
-        } finally {
-            elements.submitBtn.disabled = false;
-        }
-    });
-
-    // --- GLOBAL ACTIONS (Edit & Delete) ---
-    window.deleteItem = async (id) => {
-        if (!confirm("Hapus data ini?")) return;
-        try {
-            await deleteDoc(doc(db, 'items', id));
-            showToast("Data dihapus!");
-        } catch (err) {
-            showToast("Gagal menghapus.");
-        }
-    };
-
-    window.editItem = (id) => {
-        const item = inventoryData.find(i => i.id === id);
-        if (!item) return;
-
-        isEditing = true;
-        elements.formTitle.textContent = "Ubah Data";
-        elements.cancelBtn.style.display = "block";
-        elements.submitBtn.textContent = "🔄 Update Data";
-        
-        document.getElementById('editId').value = item.id;
-        elements.itemCode.value = item.code;
-        elements.form.itemName.value = item.name;
-        elements.form.category.value = item.category;
-        elements.form.condition.value = item.condition;
-        elements.form.qty.value = item.qty;
-        elements.form.unit.value = item.unit;
-        elements.form.location.value = item.location;
-        elements.form.description.value = item.description || "";
-        
-        if (item.image) {
-            currentImageBase64 = item.image;
-            elements.imgPrev.src = item.image;
-            elements.imgPrev.style.display = "block";
-        }
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    };
-
-    // --- UTILS ---
-    elements.imgInput.onchange = (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = (ev) => {
-                currentImageBase64 = ev.target.result;
-                elements.imgPrev.src = currentImageBase64;
-                elements.imgPrev.style.display = 'block';
-            };
-            reader.readAsDataURL(file);
-        }
-    };
 
     function resetForm() {
         isEditing = false;
@@ -546,16 +516,22 @@
     }
 
     elements.cancelBtn.onclick = resetForm;
-
-    function generateCode() {
-        elements.itemCode.value = "INV-" + Math.random().toString(36).substr(2, 6).toUpperCase();
-    }
-
-    function showToast(msg) {
-        elements.toast.textContent = msg;
-        elements.toast.style.display = 'block';
-        setTimeout(() => elements.toast.style.display = 'none', 3000);
-    }
+    function generateCode() { elements.itemCode.value = "INV-" + Math.random().toString(36).substr(2, 6).toUpperCase(); }
+    function showToast(msg) { elements.toast.textContent = msg; elements.toast.style.display = 'block'; setTimeout(() => elements.toast.style.display = 'none', 3000); }
+    
+    // Image handler
+    elements.imgInput.onchange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                currentImageBase64 = ev.target.result;
+                elements.imgPrev.src = currentImageBase64;
+                elements.imgPrev.style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        }
+    };
 
     generateCode();
 </script>
