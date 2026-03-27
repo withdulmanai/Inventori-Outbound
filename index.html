@@ -199,6 +199,22 @@
         </div>
     </div>
 
+    <div id="loginModal" class="loading-overlay" style="display: none;">
+        <div class="card" style="width: 320px;">
+            <div class="card-title">🔐 Admin Login</div>
+            <div class="form-group">
+                <label>Email</label>
+                <input type="email" id="loginEmail" placeholder="admin@resort.com">
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" id="loginPassword">
+            </div>
+            <button id="doLogin" class="btn btn-primary">Masuk</button>
+            <button id="closeLogin" class="btn btn-outline">Batal</button>
+        </div>
+    </div>
+
     <div class="container">
         <header>
             <h1>📦 Smart Inventory Cloud</h1>
@@ -317,223 +333,209 @@
                     </div>
                 </div>
             </section>
+            
+            <div style="position: fixed; top: 20px; right: 20px; z-index: 100;">
+    <button id="authBtn" class="btn" style="width: auto; background: var(--card-bg); border: 1px solid var(--border);">🔐 Login Admin</button>
+</div>
+
+<div id="loginModal" class="loading-overlay" style="display: none; border-radius: 0;">
+    <div class="card" style="width: 320px;">
+        <div class="card-title">Admin Login</div>
+        <div class="form-group">
+            <label>Email</label>
+            <input type="email" id="loginEmail" placeholder="admin@resort.com">
+        </div>
+        <div class="form-group">
+            <label>Password</label>
+            <input type="password" id="loginPassword">
+        </div>
+        <button id="doLogin" class="btn btn-primary">Masuk</button>
+        <button id="closeLogin" class="btn btn-outline">Batal</button>
+    </div>
+</div>
+            
         </main>
     </div>
 
     <div id="toast"></div>
 
     <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
-    // Import Realtime Database & Auth
-    import { getDatabase, ref, set, onValue, push, remove, update } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-database.js";
-    import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-auth.js";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
+        import { getDatabase, ref, set, onValue, push, remove, update } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-database.js";
+        import { getAuth, signInAnonymously, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-auth.js";
 
-    const firebaseConfig = {
-        apiKey: "AIzaSyBU_8nsWAQxTU9XDrl0rrlvJcA8x7068Cs",
-        authDomain: "inventori-outbound.firebaseapp.com",
-        databaseURL: "https://inventori-outbound-default-rtdb.firebaseio.com", // Pastikan URL ini sesuai dengan di Console
-        projectId: "inventori-outbound",
-        storageBucket: "inventori-outbound.firebasestorage.app",
-        messagingSenderId: "603191770704",
-        appId: "1:603191770704:web:302df531503126e2215b55"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
-    const auth = getAuth(app);
-
-    let inventoryData = [];
-    let isEditing = false;
-    let currentImageBase64 = "";
-
-    // DOM Elements (Sama seperti sebelumnya)
-    const elements = {
-        form: document.getElementById('inventoryForm'),
-        body: document.getElementById('inventoryBody'),
-        imgInput: document.getElementById('imageInput'),
-        imgPrev: document.getElementById('imagePreview'),
-        itemCode: document.getElementById('itemCode'),
-        loader: document.getElementById('loader'),
-        toast: document.getElementById('toast'),
-        formTitle: document.getElementById('formTitle'),
-        cancelBtn: document.getElementById('cancelBtn'),
-        submitBtn: document.getElementById('submitBtn'),
-        statTotal: document.getElementById('stat-total'),
-        statHewan: document.getElementById('stat-hewan'),
-        statBenda: document.getElementById('stat-benda'),
-        statAlert: document.getElementById('stat-alert')
-    };
-
-    // --- AUTHENTICATION ---
-onAuthStateChanged(auth, (user) => {
-    if (user) {
-        // Pengguna sudah login (Anonymous atau Permanent)
-        // Rules ".read": "auth != null" sekarang terpenuhi
-        document.getElementById('userStatus').textContent = `Terhubung sebagai: ${user.isAnonymous ? 'Tamu' : 'Admin'}`;
-        setupRealtimeListener(); // Jalankan sinkronisasi data
-        elements.loader.style.display = 'none';
-    } else {
-        // Jika belum login, paksa login secara anonim
-        signInAnonymously(auth).catch((error) => {
-            console.error("Auth Error:", error);
-            showToast("Gagal masuk ke sistem.");
-        });
-    }
-});
-
-    function setupRealtimeListener() {
-        const inventoryRef = ref(db, 'inventory');
-        
-        // Fungsi onValue adalah jantung dari Realtime Database
-        onValue(inventoryRef, (snapshot) => {
-            const data = snapshot.val();
-            inventoryData = [];
-            if (data) {
-                // Mengubah objek JSON Firebase menjadi Array
-                Object.keys(data).forEach(key => {
-                    inventoryData.push({ id: key, ...data[key] });
-                });
-            }
-            // Sort terbaru di atas
-            inventoryData.sort((a, b) => b.timestamp - a.timestamp);
-            renderTable();
-            updateDashboard();
-        });
-    }
-
-    // --- ACTIONS ---
-    elements.form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        elements.submitBtn.disabled = true;
-
-        const formData = {
-            code: elements.itemCode.value,
-            name: elements.form.itemName.value,
-            category: elements.form.category.value,
-            condition: elements.form.condition.value,
-            qty: parseInt(elements.form.qty.value) || 0,
-            unit: elements.form.unit.value,
-            location: elements.form.location.value,
-            description: elements.form.description.value,
-            image: currentImageBase64,
-            timestamp: Date.now()
+        const firebaseConfig = {
+            apiKey: "AIzaSyBU_8nsWAQxTU9XDrl0rrlvJcA8x7068Cs",
+            authDomain: "inventori-outbound.firebaseapp.com",
+            databaseURL: "https://inventori-outbound-default-rtdb.firebaseio.com",
+            projectId: "inventori-outbound"
         };
 
-        try {
-            if (isEditing) {
-                const id = document.getElementById('editId').value;
-                await update(ref(db, `inventory/${id}`), formData);
-                showToast("Data diperbarui!");
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+        const auth = getAuth(app);
+
+        let inventoryData = [];
+        let isEditing = false;
+        let currentImageBase64 = "";
+
+        const elements = {
+            form: document.getElementById('inventoryForm'),
+            body: document.getElementById('inventoryBody'),
+            imgInput: document.getElementById('imageInput'),
+            imgPrev: document.getElementById('imagePreview'),
+            itemCode: document.getElementById('itemCode'),
+            loader: document.getElementById('loader'),
+            toast: document.getElementById('toast'),
+            formTitle: document.getElementById('formTitle'),
+            cancelBtn: document.getElementById('cancelBtn'),
+            submitBtn: document.getElementById('submitBtn'),
+            adminSection: document.getElementById('adminFormSection'),
+            authBtn: document.getElementById('authBtn'),
+            loginModal: document.getElementById('loginModal')
+        };
+
+        // --- AUTH LOGIC ---
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                const isAdmin = !user.isAnonymous;
+                document.getElementById('userStatus').textContent = isAdmin ? "Mode: Admin (Full Access)" : "Mode: Pantau (Read-Only)";
+                elements.adminSection.style.display = isAdmin ? "block" : "none";
+                elements.authBtn.textContent = isAdmin ? "🚀 Logout Admin" : "🔐 Login Admin";
+                
+                // Ubah layout grid jika bukan admin agar tabel melebar
+                document.querySelector('.main-layout').style.gridTemplateColumns = isAdmin ? "380px 1fr" : "1fr";
+                
+                setupRealtimeListener();
+                elements.loader.style.display = 'none';
             } else {
-                const newPostRef = push(ref(db, 'inventory'));
-                await set(newPostRef, formData);
-                showToast("Berhasil disimpan!");
+                signInAnonymously(auth);
+            }
+        });
+
+        elements.authBtn.onclick = () => {
+            if (auth.currentUser && !auth.currentUser.isAnonymous) {
+                signOut(auth).then(() => location.reload());
+            } else {
+                elements.loginModal.style.display = "flex";
+            }
+        };
+
+        document.getElementById('doLogin').onclick = async () => {
+            const email = document.getElementById('loginEmail').value;
+            const pass = document.getElementById('loginPassword').value;
+            try {
+                await signInWithEmailAndPassword(auth, email, pass);
+                elements.loginModal.style.display = "none";
+                showToast("Login Berhasil!");
+            } catch (err) { alert("Login Gagal: " + err.message); }
+        };
+
+        document.getElementById('closeLogin').onclick = () => elements.loginModal.style.display = "none";
+
+        // --- DATABASE LOGIC ---
+        function setupRealtimeListener() {
+            onValue(ref(db, 'inventory'), (snapshot) => {
+                const data = snapshot.val();
+                inventoryData = data ? Object.keys(data).map(key => ({ id: key, ...data[key] })) : [];
+                inventoryData.sort((a, b) => b.timestamp - a.timestamp);
+                renderTable();
+                updateDashboard();
+            });
+        }
+
+        function renderTable() {
+            elements.body.innerHTML = "";
+            const isAdmin = auth.currentUser && !auth.currentUser.isAnonymous;
+            
+            inventoryData.forEach(item => {
+                const condClass = item.condition === 'Baik' ? 'badge-success' : (item.condition === 'Rusak' ? 'badge-warning' : 'badge-danger');
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            ${item.image ? `<img src="${item.image}" style="width:40px; height:40px; border-radius:8px; object-fit:cover;">` : '📦'}
+                            <div><div style="font-weight:600;">${item.name}</div><div style="font-size:0.7rem; color:var(--text-muted);">${item.code}</div></div>
+                        </div>
+                    </td>
+                    <td><b>${item.qty}</b> <span style="font-size:0.8rem; opacity:0.7;">${item.unit}</span></td>
+                    <td>📍 ${item.location}</td>
+                    <td><span class="badge ${condClass}">${item.condition}</span></td>
+                    <td>
+                        ${isAdmin ? `
+                            <button class="btn-icon" onclick="editItem('${item.id}')">✏️</button>
+                            <button class="btn-icon" onclick="deleteItem('${item.id}')">🗑️</button>
+                        ` : '🔒'}
+                    </td>
+                `;
+                elements.body.appendChild(tr);
+            });
+        }
+
+        // Action Handlers
+        elements.form.onsubmit = async (e) => {
+            e.preventDefault();
+            const data = {
+                code: elements.itemCode.value,
+                name: document.getElementById('itemName').value,
+                category: document.getElementById('category').value,
+                condition: document.getElementById('condition').value,
+                qty: parseInt(document.getElementById('qty').value),
+                unit: document.getElementById('unit').value,
+                location: document.getElementById('location').value,
+                image: currentImageBase64,
+                timestamp: Date.now()
+            };
+
+            if (isEditing) {
+                await update(ref(db, `inventory/${document.getElementById('editId').value}`), data);
+            } else {
+                await set(push(ref(db, 'inventory')), data);
             }
             resetForm();
-        } catch (err) {
-            showToast("Gagal menyimpan: " + err.message);
-        } finally {
-            elements.submitBtn.disabled = false;
+            showToast("Data Berhasil Disimpan!");
+        };
+
+        window.editItem = (id) => {
+            const item = inventoryData.find(i => i.id === id);
+            isEditing = true;
+            elements.formTitle.textContent = "Ubah Data";
+            elements.submitBtn.textContent = "🔄 Update Data";
+            elements.cancelBtn.style.display = "block";
+            document.getElementById('editId').value = id;
+            document.getElementById('itemName').value = item.name;
+            elements.itemCode.value = item.code;
+            if (item.image) { currentImageBase64 = item.image; elements.imgPrev.src = item.image; elements.imgPrev.style.display = 'block'; }
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        };
+
+        window.deleteItem = (id) => { if(confirm("Hapus?")) remove(ref(db, `inventory/${id}`)); };
+
+        function updateDashboard() {
+            document.getElementById('stat-total').textContent = inventoryData.length;
+            document.getElementById('stat-hewan').textContent = inventoryData.filter(i => i.category === 'Hewan').length;
+            document.getElementById('stat-benda').textContent = inventoryData.filter(i => i.category === 'Benda').length;
+            document.getElementById('stat-alert').textContent = inventoryData.filter(i => i.condition !== 'Baik').length;
         }
-    });
 
-    window.deleteItem = async (id) => {
-        if (confirm("Hapus item ini?")) {
-            await remove(ref(db, `inventory/${id}`));
-            showToast("Item dihapus.");
+        function resetForm() {
+            isEditing = false;
+            elements.form.reset();
+            elements.imgPrev.style.display = 'none';
+            currentImageBase64 = "";
+            generateCode();
         }
-    };
 
-    // Fungsi renderTable, updateDashboard, editItem, dan resetForm tetap sama logic-nya
-    // Hanya pastikan pemanggilan global window.editItem tetap ada
-    window.editItem = (id) => {
-        const item = inventoryData.find(i => i.id === id);
-        if (!item) return;
-        isEditing = true;
-        elements.formTitle.textContent = "Ubah Data Inventori";
-        elements.cancelBtn.style.display = "block";
-        elements.submitBtn.textContent = "🔄 Update Data";
-        document.getElementById('editId').value = id;
-        elements.itemCode.value = item.code;
-        elements.form.itemName.value = item.name;
-        elements.form.category.value = item.category;
-        elements.form.condition.value = item.condition;
-        elements.form.qty.value = item.qty;
-        elements.form.unit.value = item.unit;
-        elements.form.location.value = item.location;
-        elements.form.description.value = item.description || "";
-        if (item.image) {
-            currentImageBase64 = item.image;
-            elements.imgPrev.src = item.image;
-            elements.imgPrev.style.display = "block";
-        }
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    };
-
-    function renderTable() {
-        elements.body.innerHTML = "";
-        inventoryData.forEach(item => {
-            const conditionClass = item.condition === 'Baik' ? 'badge-success' : (item.condition === 'Rusak' ? 'badge-warning' : 'badge-danger');
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td>
-                    <div style="display:flex; align-items:center; gap:10px;">
-                        ${item.image ? `<img src="${item.image}" style="width:40px; height:40px; border-radius:8px; object-fit:cover;">` : '📦'}
-                        <div>
-                            <div style="font-weight:600;">${item.name}</div>
-                            <div style="font-size:0.7rem; color:var(--text-muted);">${item.code}</div>
-                        </div>
-                    </div>
-                </td>
-                <td><b>${item.qty}</b> <span style="font-size:0.8rem; opacity:0.7;">${item.unit}</span></td>
-                <td>📍 ${item.location}</td>
-                <td><span class="badge ${conditionClass}">${item.condition}</span></td>
-                <td>
-                    <button class="btn-icon" onclick="editItem('${item.id}')">✏️</button>
-                    <button class="btn-icon" onclick="deleteItem('${item.id}')">🗑️</button>
-                </td>
-            `;
-            elements.body.appendChild(tr);
-        });
-    }
-
-    function updateDashboard() {
-        elements.statTotal.textContent = inventoryData.length;
-        elements.statHewan.textContent = inventoryData.filter(i => i.category === 'Hewan').length;
-        elements.statBenda.textContent = inventoryData.filter(i => i.category === 'Benda').length;
-        elements.statAlert.textContent = inventoryData.filter(i => i.condition !== 'Baik').length;
-    }
-
-    function resetForm() {
-        isEditing = false;
-        elements.form.reset();
-        elements.formTitle.textContent = "Tambah Inventori";
-        elements.cancelBtn.style.display = "none";
-        elements.submitBtn.textContent = "💾 Simpan ke Cloud";
-        elements.imgPrev.style.display = "none";
-        currentImageBase64 = "";
-        generateCode();
-    }
-
-    elements.cancelBtn.onclick = resetForm;
-    function generateCode() { elements.itemCode.value = "INV-" + Math.random().toString(36).substr(2, 6).toUpperCase(); }
-    function showToast(msg) { elements.toast.textContent = msg; elements.toast.style.display = 'block'; setTimeout(() => elements.toast.style.display = 'none', 3000); }
-    
-    // Image handler
-    elements.imgInput.onchange = (e) => {
-        const file = e.target.files[0];
-        if (file) {
+        function generateCode() { elements.itemCode.value = "INV-" + Math.random().toString(36).substr(2, 6).toUpperCase(); }
+        function showToast(msg) { elements.toast.textContent = msg; elements.toast.style.display = 'block'; setTimeout(() => elements.toast.style.display = 'none', 3000); }
+        
+        elements.imgInput.onchange = (e) => {
             const reader = new FileReader();
-            reader.onload = (ev) => {
-                currentImageBase64 = ev.target.result;
-                elements.imgPrev.src = currentImageBase64;
-                elements.imgPrev.style.display = 'block';
-            };
-            reader.readAsDataURL(file);
-        }
-    };
+            reader.onload = (ev) => { currentImageBase64 = ev.target.result; elements.imgPrev.src = ev.target.result; elements.imgPrev.style.display = 'block'; };
+            reader.readAsDataURL(e.target.files[0]);
+        };
 
-    generateCode();
-</script>
+        generateCode();
+    </script>
 </body>
 </html>
